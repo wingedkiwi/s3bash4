@@ -17,12 +17,16 @@
 
 set -euo pipefail
 
-readonly PROJECT_PATH=$( cd $(dirname $0) ; cd ../; pwd -P )
-readonly SCRIPT_NAME="$(basename $0)"
+PROJECT_PATH=$( cd "$(dirname "$0")" ; cd ../; pwd -P )
+readonly PROJECT_PATH
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
+# shellcheck disable=SC2034 # rule "METHOD appears unused"
 readonly METHOD="PUT"
 
 # Includes
-source ${PROJECT_PATH}/lib/s3-common.sh
+# shellcheck source=../lib/s3-common.sh
+source "${PROJECT_PATH}/lib/s3-common.sh"
 
 ##
 # Print help and exit
@@ -33,10 +37,10 @@ source ${PROJECT_PATH}/lib/s3-common.sh
 ##
 printUsageAndExitWith() {
   printf "Usage:\n"
-  printf "  ${SCRIPT_NAME} [--debug] [-vip] [-k key] [-r region] [-s file] [-c content_type] -T file_to_upload resource_path\n"
-  printf "  ${SCRIPT_NAME} -h\n"
+  printf "  %s [--debug] [-vip] [-k key] [-r region] [-s file] [-c content_type] -T file_to_upload resource_path\n" "${SCRIPT_NAME}"
+  printf "  %s -h\n" "${SCRIPT_NAME}"
   printf "Example:\n"
-  printf "  ${SCRIPT_NAME} -k key -s secret -r eu-central-1 -T file.ext -c text/plain /bucket/file.ext\n"
+  printf "  %s -k key -s secret -r eu-central-1 -T file.ext -c text/plain /bucket/file.ext\n" "${SCRIPT_NAME}"
   printf "Options:\n"
   printf "  -c,--content-type\tMIME content type\n"
   printf "     --debug\tEnable debugging mode\n"
@@ -50,8 +54,7 @@ printUsageAndExitWith() {
   printf "  -T,--upload-file\tPath to file to upload\n"
   printf "  -v,--verbose\tVerbose output\n"
   printf "     --version\tShow version\n"
-
-  exit $1
+  exit "$1"
 }
 
 ##
@@ -88,7 +91,7 @@ parseCommandLine() {
   # Parse options
   local remaining=
   local secretKeyFile=
-  while [[ $# > 0 ]]; do
+  while [[ $# -gt 0 ]]; do
     local key="$1"
     case ${key} in
       --version)          showVersionAndExit;;
@@ -97,53 +100,53 @@ parseCommandLine() {
       -v|--verbose)       VERBOSE=true;;
       -i|--insecure)      INSECURE=true;;
       -p|--publish)       PUBLISH=true;;
-      -c|--content-type)  assertArgument $@; CONTENT_TYPE=$2; shift;;
-      -T|--upload-file)   assertArgument $@; FILE_TO_UPLOAD=$2; shift;;
-      -r|--region)        assertArgument $@; AWS_REGION=$2; shift;;
-      -k|--key)           assertArgument $@; AWS_ACCESS_KEY_ID=$2; shift;;
-      -s|--secret)        assertArgument $@; secretKeyFile=$2; shift;;
-      -t|--token)         assertArgument $@; AWS_SECURITY_TOKEN=$2; shift;;
+      -c|--content-type)  assertArgument "$@"; CONTENT_TYPE=$2; shift;;
+      -T|--upload-file)   assertArgument "$@"; FILE_TO_UPLOAD=$2; shift;;
+      -r|--region)        assertArgument "$@"; AWS_REGION=$2; shift;;
+      -k|--key)           assertArgument "$@"; AWS_ACCESS_KEY_ID=$2; shift;;
+      -s|--secret)        assertArgument "$@"; secretKeyFile=$2; shift;;
+      -t|--token)         assertArgument "$@"; AWS_SECURITY_TOKEN=$2; shift;;
       -*)                 err "Unknown option $1"
-                          printUsageAndExitWith ${INVALID_USAGE_EXIT_CODE};;
+                          printUsageAndExitWith "${INVALID_USAGE_EXIT_CODE}";;
       *)                  remaining="${remaining} \"${key}\"";;
     esac
     shift
   done
 
   # Set the non-parameters back into the positional parameters ($1 $2 ..)
-  eval set -- ${remaining}
+  eval set -- "${remaining}"
 
   # Read secret file if set
-  if ! [[ -z "${secretKeyFile}" ]]; then
+  if [[ -n "${secretKeyFile}" ]]; then
    AWS_SECRET_ACCESS_KEY=$(processAWSSecretFile "${secretKeyFile}")
   fi
 
   # Parse arguments
-  if [[ $# != 1 ]]; then
+  if [[ $# -ne 1 ]]; then
     err "You need to specify the resource path to upload to e.g. /bucket/file.ext"
-    printUsageAndExitWith ${INVALID_USAGE_EXIT_CODE}
+    printUsageAndExitWith "${INVALID_USAGE_EXIT_CODE}"
   fi
 
-  assertResourcePath $1
+  assertResourcePath "$1"
   RESOURCE_PATH="$1"
 
   if [[ -z "${FILE_TO_UPLOAD}" ]]; then
     err "You need to specify the file to upload using -T"
-    printUsageAndExitWith ${INVALID_USAGE_EXIT_CODE}
+    printUsageAndExitWith "${INVALID_USAGE_EXIT_CODE}"
   fi
   assertFileExists "${FILE_TO_UPLOAD}"
 
   if [[ -z "${AWS_REGION}" ]]; then
     err "AWS Region not specified"
-    printUsageAndExitWith ${INVALID_USAGE_EXIT_CODE}
+    printUsageAndExitWith "${INVALID_USAGE_EXIT_CODE}"
   fi
   if [[ -z "${AWS_ACCESS_KEY_ID}" ]]; then
     err "AWS Access Key ID not specified"
-    printUsageAndExitWith ${INVALID_USAGE_EXIT_CODE}
+    printUsageAndExitWith "${INVALID_USAGE_EXIT_CODE}"
   fi
   if [[ -z "${AWS_SECRET_ACCESS_KEY}" ]]; then
     err "AWS Secret Access Key not specified"
-    printUsageAndExitWith ${INVALID_USAGE_EXIT_CODE}
+    printUsageAndExitWith "${INVALID_USAGE_EXIT_CODE}"
   fi
 
   # Freeze globals
@@ -163,8 +166,8 @@ parseCommandLine() {
 ##
 main() {
   checkEnvironment
-  parseCommandLine $@
+  parseCommandLine "$@"
   performRequest
 }
 
-main $@
+main "$@"

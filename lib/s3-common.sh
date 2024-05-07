@@ -4,7 +4,7 @@
 # (c) 2015 Chi Vinh Le <cvl@winged.kiwi>
 
 # Constants
-readonly VERSION="0.0.1"
+readonly VERSION="0.0.2"
 
 # Exit codes
 readonly INVALID_USAGE_EXIT_CODE=1
@@ -17,7 +17,7 @@ readonly INVALID_ENVIRONMENT_EXIT_CODE=3
 #   $1 string to output
 ##
 err() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] Error: $@" >&2
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] Error:" "$@" >&2
 }
 
 
@@ -25,7 +25,7 @@ err() {
 # Display version and exit
 ##
 showVersionAndExit() {
-  printf "$VERSION\n"
+  printf "%s\n" "$VERSION"
   exit
 }
 
@@ -33,7 +33,7 @@ showVersionAndExit() {
 # Helper for parsing the command line.
 ##
 assertArgument() {
-  if [[ $# -lt 2 ]]; then
+  if [[ $# -lt 2 || $2 =~ ^--?[a-z]+ ]]; then # One following string that is not another option
     err "Option $1 needs an argument."
     exit $INVALID_USAGE_EXIT_CODE
   fi
@@ -70,7 +70,7 @@ checkEnvironment()
 {
   programs=(openssl curl printf echo sed awk od date pwd dirname)
   for program in "${programs[@]}"; do
-    if [ ! -x "$(which $program)" ]; then
+    if [ ! -x "$(which "$program")" ]; then
       err "$program is required to run"
       exit $INVALID_ENVIRONMENT_EXIT_CODE
     fi
@@ -102,19 +102,21 @@ processAWSSecretFile() {
   fi
 
   # limit file size to max 41 characters. 40 + potential null terminating character.
-  local fileSize="$(ls -l "$1" | awk '{ print $5 }')"
+  local fileSize
+  # shellcheck disable=SC2012 # Rule "Use find instead of ls to better handle non-alphanumeric filenames"
+  fileSize="$(ls -l "$1" | awk '{ print $5 }')"
   if [[ $fileSize -gt 41 ]]; then
-    err $errStr
+    err "$errStr"
     exit $INVALID_USER_DATA_EXIT_CODE
   fi
 
-  secret=$(<$1)
+  secret=$(<"$1")
   # exact string size should be 40.
-  if [[ ${#secret} != 40 ]]; then
-    err $errStr
+  if [[ ${#secret} -ne 40 ]]; then
+    err "$errStr"
     exit $INVALID_USER_DATA_EXIT_CODE
   fi
-  echo $secret
+  echo "$secret"
 }
 
 ##
@@ -125,7 +127,7 @@ processAWSSecretFile() {
 #   string hex
 ##
 hex256() {
-  printf "$1" | od -A n -t x1 | sed ':a;N;$!ba;s/[\n ]//g'
+  echo -n "$1" | od -A n -t x1 | tr -d "\n "
 }
 
 ##
@@ -136,7 +138,9 @@ hex256() {
 #   string hash
 ##
 sha256Hash() {
-  local output=$(printf "$1" | $SHACMD)
+  local output
+  # shellcheck disable=SC2059 # Rule "Don't use variables in the printf format string"
+  output=$(printf "$1" | $SHACMD)
   echo "${output%% *}"
 }
 
@@ -148,7 +152,8 @@ sha256Hash() {
 #   string hash
 ##
 sha256HashFile() {
-  local output=$($SHACMD $1)
+  local output
+  output=$($SHACMD "$1")
   echo "${output%% *}"
 }
 
@@ -161,7 +166,8 @@ sha256HashFile() {
 #   string signature
 ##
 hmac_sha256() {
-  printf "$2" | openssl dgst -binary -hex -sha256 -mac HMAC -macopt hexkey:$1 \
+  # shellcheck disable=SC2059 # Rule "Don't use variables in the printf format string"
+  printf "$2" | openssl dgst -binary -hex -sha256 -mac HMAC -macopt hexkey:"$1" \
               | sed 's/^.* //'
 }
 
@@ -177,8 +183,9 @@ hmac_sha256() {
 #   signature
 ##
 sign() {
-  local kSigning=$(hmac_sha256 $(hmac_sha256 $(hmac_sha256 \
-                 $(hmac_sha256 $(hex256 "AWS4$1") $2) $3) $4) "aws4_request")
+  local kSigning
+  kSigning=$(hmac_sha256 "$(hmac_sha256 "$(hmac_sha256 \
+           "$(hmac_sha256 "$(hex256 "AWS4$1")" "$2")" "$3")" "$4")" "aws4_request")
   hmac_sha256 "${kSigning}" "$5"
 }
 
@@ -214,16 +221,21 @@ convS3RegionToEndpoint() {
 #   INSECURE              bool
 ##
 performRequest() {
-  local timestamp=$(date -u "+%Y-%m-%d %H:%M:%S")
-  local isoTimestamp=$(date -ud "${timestamp}" "+%Y%m%dT%H%M%SZ")
-  local dateScope=$(date -ud "${timestamp}" "+%Y%m%d")
-  local host=$(convS3RegionToEndpoint "${AWS_REGION}")
+  local timestamp
+  timestamp=$(date -u "+%Y-%m-%d %H:%M:%S")
+  local isoTimestamp
+  isoTimestamp=$(date -ud "${timestamp}" "+%Y%m%dT%H%M%SZ")
+  local dateScope
+  dateScope=$(date -ud "${timestamp}" "+%Y%m%d")
+  local host
+  host=$(convS3RegionToEndpoint "${AWS_REGION}")
 
   # Generate payload hash
-  if [[ $METHOD == "PUT" ]]; then
-    local payloadHash=$(sha256HashFile $FILE_TO_UPLOAD)
+  local payloadHash
+  if [[ ${METHOD} == "PUT" ]]; then
+    payloadHash=$(sha256HashFile "$FILE_TO_UPLOAD")
   else
-    local payloadHash=$(sha256Hash "")
+    payloadHash=$(sha256Hash "")
   fi
 
   local cmd=("curl")
@@ -243,7 +255,7 @@ performRequest() {
   fi
   cmd+=("-X" "${METHOD}")
 
-  if [[ ${METHOD} == "PUT" && ! -z "${CONTENT_TYPE}" ]]; then
+  if [[ ${METHOD} == "PUT" && -n "${CONTENT_TYPE}" ]]; then
     cmd+=("-H" "Content-Type: ${CONTENT_TYPE}")
     headers+="content-type:${CONTENT_TYPE}\n"
     headerList+="content-type;"
@@ -283,7 +295,8 @@ ${headerList}
 ${payloadHash}"
 
   # Generated request hash
-  local hashedRequest=$(sha256Hash "${canonicalRequest}")
+  local hashedRequest
+  hashedRequest=$(sha256Hash "${canonicalRequest}")
 
   # Generate signing data
   local stringToSign="AWS4-HMAC-SHA256
@@ -292,7 +305,8 @@ ${dateScope}/${AWS_REGION}/s3/aws4_request
 ${hashedRequest}"
 
   # Sign data
-  local signature=$(sign "${AWS_SECRET_ACCESS_KEY}" "${dateScope}" "${AWS_REGION}" \
+  local signature
+  signature=$(sign "${AWS_SECRET_ACCESS_KEY}" "${dateScope}" "${AWS_REGION}" \
                    "s3" "${stringToSign}")
 
   local authorizationHeader="AWS4-HMAC-SHA256 Credential=${AWS_ACCESS_KEY_ID}/${dateScope}/${AWS_REGION}/s3/aws4_request, SignedHeaders=${headerList}, Signature=${signature}"
