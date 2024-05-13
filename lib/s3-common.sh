@@ -191,18 +191,27 @@ sign() {
 
 ##
 # Get endpoint of specified region
+# Uses the following Globals:
+#   S3_DEFAULT_DOMAIN    string
+#   S3_DOMAIN            string
 # Arguments:
 #   $1 region
 # Returns:
 #   amazon andpoint
 ##
 convS3RegionToEndpoint() {
-  case "$1" in
-    us-east-1) echo "s3.amazonaws.com"
-      ;;
-    *) echo s3-${1}.amazonaws.com
-      ;;
-    esac
+  if [[ -n "${S3_DOMAIN}" ]]; then
+    echo "${S3_DOMAIN}"
+  else
+    local domain
+    domain=${S3_DEFAULT_DOMAIN:-"amazonaws.com"}
+    case "$1" in
+      us-east-1) echo "s3.${domain}"
+        ;;
+      *) echo "s3-${1}.${domain}"
+        ;;
+      esac
+  fi
 }
 
 ##

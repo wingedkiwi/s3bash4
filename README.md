@@ -8,13 +8,13 @@ This is inspired by the discontinued [_s3-bash_](https://github.com/cosmin/s3-ba
 
 ```sh
   # Get file from bucket:
-  s3-get -k {accesskey} -s /{path}/{secretid} -r {region} /{bucketname}/{filename} > {filename}
+  s3-get -k {accesskey} -s /{path}/{secretid} -r {region} [-d {customdomain}] /{bucketname}/{filename} > {filename}
 
   # Upload file to bucket:
-  s3-put -k {accesskey} -s /{path}/{secretid} -r {region} -T /{path}/{filename} /{bucketname}/{filename}
+  s3-put -k {accesskey} -s /{path}/{secretid} -r {region} [-d {customdomain}] -T /{path}/{filename} /{bucketname}/{filename}
 
   # Delete from bucket:
-  s3-delete -k {accesskey} -s /{path}/{secretid} -r {region} /{bucketname}/{filename}
+  s3-delete -k {accesskey} -s /{path}/{secretid} -r {region} [-d {customdomain}] /{bucketname}/{filename}
 ```
 
 ## Environment Variables
@@ -24,6 +24,7 @@ Variable               | Description
 `AWS_ACCESS_KEY_ID`    | Default _AWS Access Key ID_
 `AWS_SECRET_ACCESS_KEY`| Default _AWS Secret Access Key_
 `AWS_DEFAULT_REGION`   | Default _AWS S3 Region_
+`S3_DEFAULT_DOMAIN`    | Default _S3 custom domain_
 `AWS_SECURITY_TOKEN`   | Default _AWS Security Token for temporary credentials_
 
 ## Requirements

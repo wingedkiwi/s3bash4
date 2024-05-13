@@ -43,6 +43,7 @@ printUsageAndExitWith() {
   printf "  -h,--help\tPrint this help\n"
   printf "  -k,--key\tAWS Access Key ID. Default to environment variable AWS_ACCESS_KEY_ID\n"
   printf "  -r,--region\tAWS S3 Region. Default to environment variable AWS_DEFAULT_REGION\n"
+  printf "  -d,--domain\tS3 custom network domain. Default to environment variable S3_DEFAULT_DOMAIN\n"
   printf "  -s,--secret\tFile containing AWS Secret Access Key. If not set, secret will be environment variable AWS_SECRET_ACCESS_KEY\n"
   printf "     --version\tShow version\n"
   exit "$1"
@@ -61,6 +62,7 @@ printUsageAndExitWith() {
 parseCommandLine() {
   # Init globals
   AWS_REGION=${AWS_DEFAULT_REGION:-""}
+  S3_DOMAIN=${S3_DEFAULT_DOMAIN:-""}
   AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-""}
   AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-""}
 
@@ -72,6 +74,7 @@ parseCommandLine() {
     case $key in
       -h|--help)       printUsageAndExitWith 0;;
       -r|--region)     assertArgument "$@"; AWS_REGION=$2; shift;;
+      -d|--domain)     assertArgument "$@"; S3_DOMAIN=$2; shift;;
       -k|--key)        assertArgument "$@"; AWS_ACCESS_KEY_ID=$2; shift;;
       -s|--secret)     assertArgument "$@"; secretKeyFile=$2; shift;;
       -*)              err "Unknown option $1"
@@ -100,6 +103,7 @@ parseCommandLine() {
 
   # Freeze globals
   readonly AWS_REGION
+  readonly S3_DOMAIN
   readonly AWS_ACCESS_KEY_ID
   readonly AWS_SECRET_ACCESS_KEY
   readonly RESOURCE_PATH
@@ -116,6 +120,7 @@ main() {
   local testfile="${PROJECT_PATH}/test/testfile"
 
   export AWS_DEFAULT_REGION=${AWS_REGION}
+  export S3_DEFAULT_DOMAIN=${S3_DOMAIN}
   export AWS_ACCESS_KEY_ID
   export AWS_SECRET_ACCESS_KEY
 
