@@ -37,7 +37,7 @@ source "${PROJECT_PATH}/lib/s3-common.sh"
 ##
 printUsageAndExitWith() {
   printf "Usage:\n"
-  printf "  %s [-vi] [-k key] [-s file] [-r region] resource_path\n" "${SCRIPT_NAME}"
+  printf "  %s [-vi] [-k key] [-s file] [-r region] [-d domain] resource_path\n" "${SCRIPT_NAME}"
   printf "  %s -h\n" "${SCRIPT_NAME}"
   printf "Example:\n"
   printf "  %s -k key -s secret -r eu-central-1 /bucket/file.ext\n" "${SCRIPT_NAME}"
@@ -47,6 +47,7 @@ printUsageAndExitWith() {
   printf "  -i,--insecure\tUse http instead of https\n"
   printf "  -k,--key\tAWS Access Key ID. Default to environment variable AWS_ACCESS_KEY_ID\n"
   printf "  -r,--region\tAWS S3 Region. Default to environment variable AWS_DEFAULT_REGION\n"
+  printf "  -d,--domain\tS3 custom network domain. Default to environment variable S3_DEFAULT_DOMAIN or 'amazonaws.com'\n"
   printf "  -s,--secret\tFile containing AWS Secret Access Key. If not set, secret will be environment variable AWS_SECRET_ACCESS_KEY\n"
   printf "  -t,--token\tSecurity token for temporary credentials. If not set, token will be environment variable AWS_SECURITY_TOKEN\n"
   printf "  -v,--verbose\tVerbose output\n"

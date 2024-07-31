@@ -58,7 +58,7 @@ assertResourcePath() {
 ##
 assertFileExists() {
   if [[ ! -f $1 ]]; then
-    err "$1 file doesn't exists"
+    err "$1 file does not exist"
     exit $INVALID_USER_DATA_EXIT_CODE
   fi
 }

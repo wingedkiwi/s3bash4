@@ -35,7 +35,7 @@ source "${PROJECT_PATH}/lib/s3-common.sh"
 ##
 printUsageAndExitWith() {
   printf "Usage:\n"
-  printf "  %s [-k key] [-s file] [-r region] resource_path\n" "${SCRIPT_NAME}"
+  printf "  %s [-k key] [-s file] [-r region] [-d domain] resource_path\n" "${SCRIPT_NAME}"
   printf "  %s -h\n" "${SCRIPT_NAME}"
   printf "Example:\n"
   printf "  %s -k key -s secret -r eu-central-1 /bucket/file.ext\n" "${SCRIPT_NAME}"
