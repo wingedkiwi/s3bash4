@@ -213,18 +213,18 @@ sign() {
 #   amazon andpoint
 ##
 convS3RegionToEndpoint() {
+  local domain
   if [[ -n "${S3_DOMAIN}" ]]; then
-    echo "${S3_DOMAIN}"
+    domain="${S3_DOMAIN}"
   else
-    local domain
     domain=${S3_DEFAULT_DOMAIN:-"amazonaws.com"}
-    case "$1" in
-      us-east-1) echo "s3.${domain}"
-        ;;
-      *) echo "s3-${1}.${domain}"
-        ;;
-      esac
   fi
+  case "$1" in
+    us-east-1) echo "s3.${domain}"
+      ;;
+    *) echo "s3-${1}.${domain}"
+      ;;
+  esac
 }
 
 ##
