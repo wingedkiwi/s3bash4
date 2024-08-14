@@ -2,6 +2,7 @@
 #
 # Run tests for s3-bash4 commands
 # (c) 2015 Chi Vinh Le <cvl@winged.kiwi>
+# (c) 2024 Orange SA — author: benoit.bailleux@orange.com
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -17,11 +18,14 @@
 
 set -euo pipefail
 
-readonly PROJECT_PATH=$(dirname $(pwd))
-readonly SCRIPT_NAME="$(basename $0)"
+PROJECT_PATH=$(dirname "$(pwd)")
+readonly PROJECT_PATH
+SCRIPT_NAME="$(basename "$0")"
+readonly SCRIPT_NAME
 
 # Includes
-source ${PROJECT_PATH}/lib/s3-common.sh
+# shellcheck source=../lib/s3-common.sh
+source "${PROJECT_PATH}/lib/s3-common.sh"
 
 ##
 # Print help and exit
@@ -32,17 +36,18 @@ source ${PROJECT_PATH}/lib/s3-common.sh
 ##
 printUsageAndExitWith() {
   printf "Usage:\n"
-  printf "  $SCRIPT_NAME [-k key] [-s file] [-r region] resource_path\n"
-  printf "  $SCRIPT_NAME -h\n"
+  printf "  %s [-k key] [-s file] [-r region] [-d domain] resource_path\n" "${SCRIPT_NAME}"
+  printf "  %s -h\n" "${SCRIPT_NAME}"
   printf "Example:\n"
-  printf "  $SCRIPT_NAME -k key -s secret -r eu-central-1 /bucket/file.ext\n"
+  printf "  %s -k key -s secret -r eu-central-1 /bucket/file.ext\n" "${SCRIPT_NAME}"
   printf "Options:\n"
   printf "  -h,--help\tPrint this help\n"
   printf "  -k,--key\tAWS Access Key ID. Default to environment variable AWS_ACCESS_KEY_ID\n"
   printf "  -r,--region\tAWS S3 Region. Default to environment variable AWS_DEFAULT_REGION\n"
+  printf "  -d,--domain\tS3 custom network domain. Default to environment variable S3_DEFAULT_DOMAIN\n"
   printf "  -s,--secret\tFile containing AWS Secret Access Key. If not set, secret will be environment variable AWS_SECRET_ACCESS_KEY\n"
   printf "     --version\tShow version\n"
-  exit $1
+  exit "$1"
 }
 
 ##
@@ -58,38 +63,40 @@ printUsageAndExitWith() {
 parseCommandLine() {
   # Init globals
   AWS_REGION=${AWS_DEFAULT_REGION:-""}
+  S3_DOMAIN=${S3_DEFAULT_DOMAIN:-""}
   AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-""}
   AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-""}
 
   # Parse options
   local remaining=
   local secretKeyFile=
-  while [[ $# > 0 ]]; do
+  while [[ $# -gt 0 ]]; do
     local key="$1"
     case $key in
       -h|--help)       printUsageAndExitWith 0;;
-      -r|--region)     assertArgument $@; AWS_REGION=$2; shift;;
-      -k|--key)        assertArgument $@; AWS_ACCESS_KEY_ID=$2; shift;;
-      -s|--secret)     assertArgument $@; secretKeyFile=$2; shift;;
+      -r|--region)     assertArgument "$@"; AWS_REGION=$2; shift;;
+      -d|--domain)     assertArgument "$@"; S3_DOMAIN=$2; shift;;
+      -k|--key)        assertArgument "$@"; AWS_ACCESS_KEY_ID=$2; shift;;
+      -s|--secret)     assertArgument "$@"; secretKeyFile=$2; shift;;
       -*)              err "Unknown option $1"
-                       printUsageAndExitWith $INVALID_USAGE_EXIT_CODE;;
+                       printUsageAndExitWith "$INVALID_USAGE_EXIT_CODE";;
       *)               remaining="$remaining \"$key\"";;
     esac
     shift
   done
 
   # Set the non-parameters back into the positional parameters ($1 $2 ..)
-  eval set -- $remaining
+  eval set -- "$remaining"
 
   # Read secret file if set
-  if ! [[ -z "$secretKeyFile" ]]; then
+  if [[ -n "$secretKeyFile" ]]; then
    AWS_SECRET_ACCESS_KEY=$(processAWSSecretFile "$secretKeyFile")
   fi
 
   # Parse arguments
-  if [[ $# != 1 ]]; then
+  if [[ $# -ne 1 ]]; then
     err "You need to specify the resource path to download e.g. /bucket/file.ext"
-    printUsageAndExitWith $INVALID_USAGE_EXIT_CODE
+    printUsageAndExitWith "$INVALID_USAGE_EXIT_CODE"
   fi
 
   assertResourcePath "$1"
@@ -97,6 +104,7 @@ parseCommandLine() {
 
   # Freeze globals
   readonly AWS_REGION
+  readonly S3_DOMAIN
   readonly AWS_ACCESS_KEY_ID
   readonly AWS_SECRET_ACCESS_KEY
   readonly RESOURCE_PATH
@@ -106,13 +114,14 @@ parseCommandLine() {
 # Main routine
 ##
 main() {
-  parseCommandLine $@
+  parseCommandLine "$@"
   local get="${PROJECT_PATH}/bin/s3-get"
   local put="${PROJECT_PATH}/bin/s3-put"
   local delete="${PROJECT_PATH}/bin/s3-delete"
   local testfile="${PROJECT_PATH}/test/testfile"
 
   export AWS_DEFAULT_REGION=${AWS_REGION}
+  export S3_DEFAULT_DOMAIN=${S3_DOMAIN}
   export AWS_ACCESS_KEY_ID
   export AWS_SECRET_ACCESS_KEY
 
@@ -126,4 +135,4 @@ main() {
   "${delete}" "${RESOURCE_PATH}"
 }
 
-main $@
+main "$@"
